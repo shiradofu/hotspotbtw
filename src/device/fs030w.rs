@@ -30,7 +30,7 @@ impl FS030W {
         let resps: Vec<&str> = resp.split(',').collect();
 
         let is_charging = match resps.first() {
-            Some(status) => *status == "ac",
+            Some(status) => *status == "ac" || *status == "full",
             None => return Err(format!("unexpected resp format: {}", resp)),
         };
 
@@ -51,12 +51,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_battery_info_resp_ac_with_battery() {
+    fn parse_battery_info_resp_ac_with_battery_charging() {
         let fs030w = FS030W::new();
         let resp = "ac,88,err,1";
         let battery_info = fs030w.parse_battery_info_resp(resp).unwrap();
         assert!(battery_info.is_charging);
         assert_eq!(battery_info.percentage, 88);
+    }
+
+    #[test]
+    fn parse_battery_info_resp_ac_with_battery_fully_charged() {
+        let fs030w = FS030W::new();
+        let resp = "full,100,err,0";
+        let battery_info = fs030w.parse_battery_info_resp(resp).unwrap();
+        assert!(battery_info.is_charging);
+        assert_eq!(battery_info.percentage, 100);
     }
 
     #[test]
@@ -75,5 +84,14 @@ mod tests {
         let battery_info = fs030w.parse_battery_info_resp(resp).unwrap();
         assert!(!battery_info.is_charging);
         assert_eq!(battery_info.percentage, 88);
+    }
+
+    #[test]
+    fn parse_battery_info_resp_battery_only_fully_charged() {
+        let fs030w = FS030W::new();
+        let resp = "4,100,err,0";
+        let battery_info = fs030w.parse_battery_info_resp(resp).unwrap();
+        assert!(!battery_info.is_charging);
+        assert_eq!(battery_info.percentage, 100);
     }
 }
